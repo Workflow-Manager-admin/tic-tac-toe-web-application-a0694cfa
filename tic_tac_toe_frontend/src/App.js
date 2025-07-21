@@ -1,47 +1,66 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
+import React, { useState, useCallback } from 'react';
 import './App.css';
+import { calculateWinner, isDraw } from './utils/gameLogic';
+
+// PUBLIC_INTERFACE
+const Square = ({ value, onClick, isWinner }) => {
+  const className = `square ${value?.toLowerCase() || ''} ${isWinner ? 'winner' : ''} ${value ? 'pop' : ''}`;
+  return (
+    <button className={className} onClick={onClick}>
+      {value}
+    </button>
+  );
+};
 
 // PUBLIC_INTERFACE
 function App() {
-  const [theme, setTheme] = useState('light');
+  const [squares, setSquares] = useState(Array(9).fill(null));
+  const [xIsNext, setXIsNext] = useState(true);
+  
+  const handleClick = useCallback((i) => {
+    if (squares[i] || calculateWinner(squares)) return;
+    
+    const newSquares = squares.slice();
+    newSquares[i] = xIsNext ? 'X' : 'O';
+    setSquares(newSquares);
+    setXIsNext(!xIsNext);
+  }, [squares, xIsNext]);
 
-  // Effect to apply theme to document element
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
+  const resetGame = useCallback(() => {
+    setSquares(Array(9).fill(null));
+    setXIsNext(true);
+  }, []);
 
-  // PUBLIC_INTERFACE
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-  };
+  const winnerInfo = calculateWinner(squares);
+  const winner = winnerInfo?.winner;
+  const winningLine = winnerInfo?.line || [];
+  const gameIsDraw = !winner && isDraw(squares);
+
+  let status;
+  if (winner) {
+    status = <span className="winner-message">Winner: {winner}</span>;
+  } else if (gameIsDraw) {
+    status = <span className="draw-message">Game is a draw!</span>;
+  } else {
+    status = `Next player: ${xIsNext ? 'X' : 'O'}`;
+  }
 
   return (
     <div className="App">
-      <header className="App-header">
-        <button 
-          className="theme-toggle" 
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-        >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
-        </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <div className="game-info">{status}</div>
+      <div className="board">
+        {squares.map((square, i) => (
+          <Square
+            key={i}
+            value={square}
+            isWinner={winningLine.includes(i)}
+            onClick={() => handleClick(i)}
+          />
+        ))}
+      </div>
+      <button className="restart-button" onClick={resetGame}>
+        Restart Game
+      </button>
     </div>
   );
 }
